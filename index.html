@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title></title>
+  </head>
+  <body>
+    
+    <canvas id="canvas" width="1024" height="576"></canvas>
+
+    <script type="text/javascript">
+
+    class Supervisor {
+      constructor(worker) {
+
+        this.nbWorkers = 8
+
+        this.frame = img
+        this.context = ctx
+        this.workers = new Array()
+        this.running = 0
+
+
+        for (let i = 0; i < this.nbWorkers; i++) {
+          var w = new Worker(worker,{name:i})
+          w.rank = i
+          var that=this
+          w.onmessage = function(evt) {
+            var clamped = new Uint8ClampedArray(evt.data)
+            var chunckHeight = evt.data.byteLength/that.frame.width/4
+            var imgdata = new ImageData(clamped, that.frame.width, chunckHeight)
+            that.context.putImageData(imgdata, 0, that.frame.height*evt.target.rank/that.nbWorkers)
+            console.log(evt.target.rank,performance.now()-that.t0)
+            that.running--
+            if (that.running==0) {
+              document.dispatchEvent(new Event("jobisdone"))
+            }
+          }
+          w.onerror = function(evt) {console.log(evt)}
+          this.workers.push(w)
+        }
+
+      }
+
+
+      async draw(frame,context) {
+
+        this.t0= performance.now()
+        this.frame=frame
+        this.context=context
+
+        const rem = frame.height % this.nbWorkers
+        const D = (frame.height - rem)/this.nbWorkers
+        const hh =(frame.ymax - frame.ymin)/this.nbWorkers
+        for (let i=0; i<this.nbWorkers; i++) {
+          var tile = Object.assign({},frame)
+          tile.ymin = frame.ymin + i*hh
+          if (i<this.nbWorkers-1) {
+            tile.height = D
+            tile.ymax = tile.ymin+hh
+          } else { //last chunk
+            tile.height = D + rem
+            tile.ymax = frame.ymax
+          }
+
+          this.workers[i].postMessage(tile)
+          this.running++
+        }
+
+
+        return new Promise((resolve, reject) => {
+            document.addEventListener("jobisdone",resolve,{once:true})
+          })
+
+      }
+
+      async drawM() {
+        await this.draw(img,ctx)
+      }
+
+    }
+
+
+    </script>
+    <script type="text/javascript">
+    const ctx= canvas.getContext("2d")
+    const width = 1204
+    const height = 576
+    //M-0.15462128+i-1.03098306±2.13e-6.png
+    var img ={
+      width:width,
+      height:height,
+      xmin:-0.15462128-2.13e-6/2,
+      xmax:-0.15462128+2.13e-6/2,
+      ymin:-1.03098306-2.13e-6*9/16/2,
+      ymax:-1.03098306+2.13e-6*9/16/2,
+    }
+
+    supervisor = new Supervisor("worker2.js")
+    supervisor.drawM()
+
+    </script>
+  </body>
+</html>
