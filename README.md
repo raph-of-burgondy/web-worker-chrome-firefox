@@ -5,7 +5,7 @@ For this code, on my computer it' roughly 4x slower on Firefox compared to Chrom
 
 Trying to simplify my code for publihing on [stackoverflow](https://stackoverflow.com/questions/62016168/web-workers-firefox-vs-chromium-chrome-and-ms-edge) I have found a solution... let's say it's more a hack !
 
-Adding **anywhere** in the worker's message handler a blank `try {} catch {}` block the perfromance of Firefox is equivalent (and sometimes better :) than Chrome.
+Adding **anywhere** in the worker's message handler a blank `try {} catch {}` block the performance of Firefox is equivalent (and sometimes better :) than Chrome.
 
 
 Explanation ?
